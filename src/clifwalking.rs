@@ -1,30 +1,23 @@
 #[derive(Debug, Copy, Clone)]
 pub enum CliffWalkingError {
-    EnvNotReady
+    EnvNotReady,
+    InvalidAction,
 }
-
-#[derive(Debug, Copy, Clone)]
-pub enum CliffWalkingAction {
-    LEFT,
-    DOWN,
-    RIGHT,
-    UP,
-}
-
 
 #[derive(Debug, Clone)]
 pub struct CliffWalkingEnv {
     ready: bool,
-    obs: [[(usize, f64, bool); 4]; 48],
+    obs: [[(usize, f32, bool); 4]; 48],
     player_pos: usize,
     max_steps: u128,
     curr_step: u128,
 }
 
 impl CliffWalkingEnv {
+    pub const N_ACTIONS: usize = 4;
+    pub const N_STATES: usize = 48;
     const NCOL: usize = 12;
     const NROW: usize = 4;
-    const N_ACTIONS: usize = 4;
     const START_POSITION: usize = 36;
     const CLIFF_POSITIONS: [usize; 10] = [37, 38, 39, 40, 41, 42, 43, 44, 45, 46];
     const GOAL_POSITION: usize = 47;
@@ -55,19 +48,21 @@ impl CliffWalkingEnv {
         (new_row, new_col)
     }
 
-    fn update_probability_matrix(row: usize, col: usize, action: usize) -> (usize, f64, bool) {
-        let (newrow, newcol) = Self::inc( row, col, action);
+    fn update_probability_matrix(row: usize, col: usize, action: usize) -> (usize, f32, bool) {
+        let (newrow, newcol) = Self::inc(row, col, action);
         let newstate: usize = newrow * Self::NCOL + newcol;
         let win: bool = newstate == Self::GOAL_POSITION;
         let lose: bool = Self::CLIFF_POSITIONS.contains(&newstate);
-        let reward: f64 = if lose { -100.0 } else { -1.0 };
+        let reward: f32 = if lose { -100.0 } else { -1.0 };
         (newstate, reward, lose || win)
     }
 
     pub fn new(max_steps: u128) -> Self {
-        let mut initial_state_distrib: [f64; Self::NROW * Self::NCOL] = [0.0; Self::NROW*Self::NCOL];
+        let mut initial_state_distrib: [f32; Self::NROW * Self::NCOL] =
+            [0.0; Self::NROW * Self::NCOL];
         initial_state_distrib[Self::START_POSITION] = 1.0;
-        let mut obs: [[(usize, f64, bool); Self::N_ACTIONS]; Self::NROW * Self::NCOL] = [[(0, 0.0, false); Self::N_ACTIONS]; Self::NROW * Self::NCOL];
+        let mut obs: [[(usize, f32, bool); Self::N_ACTIONS]; Self::NROW * Self::NCOL] =
+            [[(0, 0.0, false); Self::N_ACTIONS]; Self::NROW * Self::NCOL];
         for row in 0..Self::NROW {
             for col in 0..Self::NCOL {
                 for a in 0..Self::N_ACTIONS {
@@ -92,7 +87,7 @@ impl CliffWalkingEnv {
         self.player_pos
     }
 
-    pub fn step(&mut self, action: CliffWalkingAction) -> Result<(usize, f64, bool), CliffWalkingError> {
+    pub fn step(&mut self, action: usize) -> Result<(usize, f32, bool), CliffWalkingError> {
         if !self.ready {
             return Err(CliffWalkingError::EnvNotReady);
         }
@@ -101,13 +96,10 @@ impl CliffWalkingEnv {
             return Ok((0, -100.0, true));
         }
         self.curr_step += 1;
-        let index = match action {
-            CliffWalkingAction::LEFT => 0,
-            CliffWalkingAction::DOWN => 1,
-            CliffWalkingAction::RIGHT => 2,
-            CliffWalkingAction::UP => 3,
-        };
-        let obs: (usize, f64, bool) = self.obs[self.player_pos][index];
+        if action > 3 {
+            return Err(CliffWalkingError::InvalidAction);
+        }
+        let obs: (usize, f32, bool) = self.obs[self.player_pos][action];
         self.player_pos = obs.0;
         if obs.2 {
             self.ready = false;
