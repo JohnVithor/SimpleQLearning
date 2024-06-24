@@ -1,6 +1,6 @@
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use crate::clifwalking::CliffWalkingEnv;
+use crate::Env;
 
 pub type ValueFunction<const A: usize> = fn(&[f32; A], usize) -> f32;
 
@@ -26,8 +26,8 @@ pub struct TrainResults {
     training_reward: Vec<f32>,
     training_length: Vec<usize>,
     training_error: Vec<f32>,
-    mean_evaluation_reward: Vec<f32>,
-    mean_evaluation_length: Vec<f32>,
+    pub mean_evaluation_reward: Vec<f32>,
+    pub mean_evaluation_length: Vec<f32>,
 }
 
 pub struct QLearning<const S: usize, const A: usize> {
@@ -36,7 +36,7 @@ pub struct QLearning<const S: usize, const A: usize> {
     value_function: ValueFunction<A>,
     learning_rate: f32,
     discount_factor: f32,
-    policy: [[f32; A]; S],
+    pub policy: [[f32; A]; S],
 }
 
 impl<const S: usize, const A: usize> QLearning<S, A> {
@@ -105,7 +105,7 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
 
     pub fn learn(
         &mut self,
-        env: &mut CliffWalkingEnv,
+        env: &mut dyn Env,
         steps: usize,
         eval_at: usize,
         eval_for: usize,
@@ -146,11 +146,7 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
         results
     }
 
-    pub fn evaluate(
-        &mut self,
-        env: &mut CliffWalkingEnv,
-        episodes: usize,
-    ) -> (Vec<f32>, Vec<usize>) {
+    pub fn evaluate(&mut self, env: &mut dyn Env, episodes: usize) -> (Vec<f32>, Vec<usize>) {
         let mut rewards = Vec::new();
         let mut lengths = Vec::new();
         for _ in 0..episodes {

@@ -1,8 +1,4 @@
-#[derive(Debug, Copy, Clone)]
-pub enum CliffWalkingError {
-    EnvNotReady,
-    InvalidAction,
-}
+use crate::{Env, EnvError};
 
 #[derive(Debug, Clone)]
 pub struct CliffWalkingEnv {
@@ -79,17 +75,19 @@ impl CliffWalkingEnv {
             curr_step: 0,
         }
     }
+}
 
-    pub fn reset(&mut self) -> usize {
+impl Env for CliffWalkingEnv {
+    fn reset(&mut self) -> usize {
         self.player_pos = Self::START_POSITION;
         self.ready = true;
         self.curr_step = 0;
         self.player_pos
     }
 
-    pub fn step(&mut self, action: usize) -> Result<(usize, f32, bool), CliffWalkingError> {
+    fn step(&mut self, action: usize) -> Result<(usize, f32, bool), EnvError> {
         if !self.ready {
-            return Err(CliffWalkingError::EnvNotReady);
+            return Err(EnvError::EnvNotReady);
         }
         if self.curr_step >= self.max_steps {
             self.ready = false;
@@ -97,7 +95,7 @@ impl CliffWalkingEnv {
         }
         self.curr_step += 1;
         if action > 3 {
-            return Err(CliffWalkingError::InvalidAction);
+            return Err(EnvError::InvalidAction);
         }
         let obs: (usize, f32, bool) = self.obs[self.player_pos][action];
         self.player_pos = obs.0;
@@ -107,7 +105,7 @@ impl CliffWalkingEnv {
         Ok(obs)
     }
 
-    pub fn render(&self) -> String {
+    fn render(&self) -> String {
         let mut new_map: String = <&str>::clone(&Self::MAP).to_string();
         let mut pos: usize = self.player_pos;
         for (i, _) in new_map.match_indices('\n') {
