@@ -184,7 +184,12 @@ impl Env for BlackJackEnv {
                 dealer_cards.push_str(i.to_string().as_str());
                 dealer_cards.push(' ');
             }
-            result = format!("Dealer: {} \nPlayer: ", dealer_cards);
+            let match_result = match self.compute_player_score().cmp(&self.compute_dealer_score()) {
+                Ordering::Greater => "Player wins!",
+                Ordering::Less => "Dealer wins!",
+                Ordering::Equal => "Tie! Nobody wins!",
+            };
+            result = format!("Final result is {}\nDealer: {} \nPlayer: ", match_result.to_string(), dealer_cards);
         }
         let mut player_cards = "".to_string();
         for i in &self.player[0..self.player_i] {

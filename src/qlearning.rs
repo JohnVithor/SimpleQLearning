@@ -1,9 +1,7 @@
-pub mod policy;
 
-use policy::Policy;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use crate::env::Env;
+use crate::{env::Env, policy::Policy};
 
 pub type ValueFunction<const A: usize> = fn(&[f32; A], usize) -> f32;
 
@@ -16,34 +14,24 @@ pub fn argmax<T: PartialOrd>(values: impl Iterator<Item = T>) -> usize {
         .0
 }
 
-pub fn sarsa<const A: usize>(next_q_values: &[f32; A], next_action: usize) -> f32 {
-    next_q_values[next_action]
-}
-
-pub fn qlearning<const A: usize>(next_q_values: &[f32; A], _next_action: usize) -> f32 {
-    next_q_values.iter().fold(f32::NAN, |acc, x| acc.max(*x))
-}
-
 #[derive(Debug, Default)]
 pub struct TrainResults {
     training_reward: Vec<f32>,
     training_length: Vec<usize>,
     training_error: Vec<f32>,
-    pub mean_evaluation_reward: Vec<f32>,
-    pub mean_evaluation_length: Vec<f32>,
+    mean_evaluation_reward: Vec<f32>,
+    mean_evaluation_length: Vec<f32>,
 }
 
-pub struct Agent<const S: usize, const A: usize> {
+pub struct QLearning<const S: usize, const A: usize> {
     epsilon: f32,
     rng: SmallRng,
-    value_function: ValueFunction<A>,
     discount_factor: f32,
     pub policy: Policy<S, A>,
 }
 
-impl<const S: usize, const A: usize> Agent<S, A> {
+impl<const S: usize, const A: usize> QLearning<S, A> {
     pub fn new(
-        value_function: ValueFunction<A>,
         learning_rate: f32,
         discount_factor: f32,
         seed: u64,
@@ -51,7 +39,6 @@ impl<const S: usize, const A: usize> Agent<S, A> {
         Self {
             epsilon: 1.0,
             rng: SmallRng::seed_from_u64(seed),
-            value_function,
             discount_factor,
             policy: Policy::<S, A>::new(learning_rate),
         }
@@ -64,11 +51,10 @@ impl<const S: usize, const A: usize> Agent<S, A> {
         reward: f32,
         terminated: bool,
         next_obs: usize,
-        next_action: usize,
     ) -> f32 {
         let next_q_values = self.policy.get_values(next_obs);
 
-        let future_q_value: f32 = (self.value_function)(&next_q_values, next_action);
+        let future_q_value: f32 = next_q_values.iter().fold(f32::NAN, |acc, x| acc.max(*x));
 
         let curr_q_values = self.policy.get_values(curr_obs);
 
@@ -118,7 +104,7 @@ impl<const S: usize, const A: usize> Agent<S, A> {
                     Err(e) => panic!("{e:?}"),
                 };
                 let next_action: usize = self.get_action(next_obs);
-                let td = self.update(curr_obs, curr_action, reward, done, next_obs, next_action);
+                let td = self.update(curr_obs, curr_action, reward, done, next_obs);
                 results.training_error.push(td);
                 curr_obs = next_obs;
                 curr_action = next_action;

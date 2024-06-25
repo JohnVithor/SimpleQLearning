@@ -1,17 +1,32 @@
-use qlearning::agent::{sarsa, Agent};
+use std::env;
+
+use clap::Parser;
+use qlearning::args::Args;
+use qlearning::qlearning::QLearning;
 use qlearning::env::blackjack::BlackJackEnv;
-use qlearning::env::Env;
+use qlearning::env::{show, Env};
+
+
 
 fn main() {
-    let mut env = BlackJackEnv::new(40);
-    let mut agent: Agent<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
-        Agent::new(sarsa, 0.1, 0.9, 0);
-    let _ = agent.learn(&mut env, 10_000, 1000, 10);
+    let args = Args::parse();
+    let seed = args.seed;
+    let lr = args.lr;
+    let gamma = args.gamma;
+    let episodes = args.episodes;
+    let eval_at = args.eval_at;
+    let eval_for = args.eval_for;
+    let show_behavior = args.print;
+    
+    let mut env = BlackJackEnv::new(seed);
+    let mut agent: QLearning<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
+        QLearning::new( lr, gamma, seed);
+    let _ = agent.learn(&mut env, episodes, eval_at, eval_for);
 
     let mut wins: u32 = 0;
     let mut losses: u32 = 0;
     let mut draws: u32 = 0;
-    const LOOP_LEN: usize = 1000000;
+    const LOOP_LEN: usize = 1_000_000;
     for _u in 0..LOOP_LEN {
         let mut curr_action = agent.get_action(env.reset());
         loop {
@@ -36,4 +51,8 @@ fn main() {
         losses as f64 / LOOP_LEN as f64,
         draws as f64 / LOOP_LEN as f64
     );
+    
+    if show_behavior{
+        show(&mut env, agent);
+    }
 }
