@@ -1,11 +1,8 @@
-use std::env;
-
 use clap::Parser;
 use qlearning::args::Args;
 use qlearning::qlearning::QLearning;
 use qlearning::env::blackjack::BlackJackEnv;
 use qlearning::env::{show, Env};
-
 
 
 fn main() {

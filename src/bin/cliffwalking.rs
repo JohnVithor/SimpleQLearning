@@ -3,7 +3,7 @@ use clap::Parser;
 use qlearning::args::Args;
 use qlearning::qlearning::QLearning;
 use qlearning::env::clifwalking::CliffWalkingEnv;
-use qlearning::env::{show, Env};
+use qlearning::env::show;
 
 
 fn main() {

@@ -5,8 +5,8 @@ pub struct CliffWalkingEnv {
     ready: bool,
     obs: [[(usize, f32, bool); 4]; 48],
     player_pos: usize,
-    max_steps: u128,
-    curr_step: u128,
+    max_steps: usize,
+    curr_step: usize,
 }
 
 impl CliffWalkingEnv {
@@ -53,12 +53,10 @@ impl CliffWalkingEnv {
         (newstate, reward, lose || win)
     }
 
-    pub fn new(max_steps: u128) -> Self {
-        let mut initial_state_distrib: [f32; Self::NROW * Self::NCOL] =
-            [0.0; Self::NROW * Self::NCOL];
+    pub fn new(max_steps: usize) -> Self {
+        let mut initial_state_distrib = [0.0; Self::NROW * Self::NCOL];
         initial_state_distrib[Self::START_POSITION] = 1.0;
-        let mut obs: [[(usize, f32, bool); Self::N_ACTIONS]; Self::NROW * Self::NCOL] =
-            [[(0, 0.0, false); Self::N_ACTIONS]; Self::NROW * Self::NCOL];
+        let mut obs = [[(0, 0.0, false); Self::N_ACTIONS]; Self::NROW * Self::NCOL];
         for row in 0..Self::NROW {
             for col in 0..Self::NCOL {
                 for a in 0..Self::N_ACTIONS {

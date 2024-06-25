@@ -7,7 +7,7 @@ use rand::SeedableRng;
 
 use crate::env::{Env, EnvError};
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct BlackJackObservation {
     pub p_score: u8,
     pub d_score: u8,
@@ -24,10 +24,14 @@ impl BlackJackObservation {
     }
 
     pub fn identifier(&self) -> usize {
-        let p_score = self.p_score as i32 - 4;
-        let d_score = self.d_score as i32 - 1;
+        let p_score = self.p_score as i32;
+        let d_score = self.d_score as i32;
         let p_ace = if self.p_ace { 1 } else { 0 };
-        (d_score * 36 + p_score * 2 + p_ace) as usize
+
+        // let p_score = self.p_score as i32 - 4;
+        // let d_score = self.d_score as i32 - 1;
+        // (d_score * 36 + p_score * 2 + p_ace) as usize
+        ((p_score - 1) + (18 * (d_score-1)) + (200* p_ace)) as usize
     }
 }
 
@@ -52,7 +56,7 @@ impl Default for BlackJackEnv {
 
 impl BlackJackEnv {
     pub const N_ACTIONS: usize = 2;
-    pub const N_STATES: usize = 1000;
+    pub const N_STATES: usize = 700;
     pub fn new(seed: u64) -> Self {
         let mut env: BlackJackEnv = Self {
             ready: false,
