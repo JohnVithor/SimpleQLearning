@@ -1,4 +1,4 @@
-use crate::{Env, EnvError};
+use crate::env::{Env, EnvError};
 
 #[derive(Debug, Clone)]
 pub struct CliffWalkingEnv {
@@ -17,7 +17,7 @@ impl CliffWalkingEnv {
     const START_POSITION: usize = 36;
     const CLIFF_POSITIONS: [usize; 10] = [37, 38, 39, 40, 41, 42, 43, 44, 45, 46];
     const GOAL_POSITION: usize = 47;
-    const MAP: &'static str = "____________\n____________\n____________\n@!!!!!!!!!!_";
+    const MAP: &'static str = "____________\n____________\n____________\n_!!!!!!!!!!_";
 
     fn inc(row: usize, col: usize, a: usize) -> (usize, usize) {
         let new_col: usize;
@@ -91,7 +91,7 @@ impl Env for CliffWalkingEnv {
         }
         if self.curr_step >= self.max_steps {
             self.ready = false;
-            return Ok((0, -100.0, true));
+            return Ok((0, -1.0, true));
         }
         self.curr_step += 1;
         if action > 3 {

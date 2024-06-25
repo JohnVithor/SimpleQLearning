@@ -5,7 +5,7 @@ use rand::prelude::Distribution;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 
-use crate::{Env, EnvError};
+use crate::env::{Env, EnvError};
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BlackJackObservation {
@@ -27,7 +27,7 @@ impl BlackJackObservation {
         let p_score = self.p_score as i32 - 4;
         let d_score = self.d_score as i32 - 1;
         let p_ace = if self.p_ace { 1 } else { 0 };
-        (d_score * 18 * 2 + p_score * 2 + p_ace) as usize
+        (d_score * 36 + p_score * 2 + p_ace) as usize
     }
 }
 

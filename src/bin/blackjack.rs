@@ -1,11 +1,11 @@
-use qlearning::blackjack::BlackJackEnv;
-use qlearning::qlearning::{qlearning, QLearning};
-use qlearning::Env;
+use qlearning::agent::{sarsa, Agent};
+use qlearning::env::blackjack::BlackJackEnv;
+use qlearning::env::Env;
 
 fn main() {
     let mut env = BlackJackEnv::new(40);
-    let mut agent: QLearning<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
-        QLearning::new(qlearning, 0.1, 0.9, 0);
+    let mut agent: Agent<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
+        Agent::new(sarsa, 0.1, 0.9, 0);
     let _ = agent.learn(&mut env, 10_000, 1000, 10);
 
     let mut wins: u32 = 0;

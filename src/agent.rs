@@ -1,6 +1,9 @@
+pub mod policy;
+
+use policy::Policy;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use crate::Env;
+use crate::env::Env;
 
 pub type ValueFunction<const A: usize> = fn(&[f32; A], usize) -> f32;
 
@@ -30,17 +33,15 @@ pub struct TrainResults {
     pub mean_evaluation_length: Vec<f32>,
 }
 
-pub struct QLearning<const S: usize, const A: usize> {
+pub struct Agent<const S: usize, const A: usize> {
     epsilon: f32,
     rng: SmallRng,
     value_function: ValueFunction<A>,
-    learning_rate: f32,
     discount_factor: f32,
-    pub policy: [[f32; A]; S],
+    pub policy: Policy<S, A>,
 }
 
-impl<const S: usize, const A: usize> QLearning<S, A> {
-    const DEFAULT_VALUES: [f32; A] = [0.0; A];
+impl<const S: usize, const A: usize> Agent<S, A> {
     pub fn new(
         value_function: ValueFunction<A>,
         learning_rate: f32,
@@ -51,9 +52,8 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
             epsilon: 1.0,
             rng: SmallRng::seed_from_u64(seed),
             value_function,
-            learning_rate,
             discount_factor,
-            policy: [[0.0; A]; S],
+            policy: Policy::<S, A>::new(learning_rate),
         }
     }
 
@@ -66,22 +66,17 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
         next_obs: usize,
         next_action: usize,
     ) -> f32 {
-        let next_q_values = self.policy.get(next_obs).unwrap_or(&Self::DEFAULT_VALUES);
+        let next_q_values = self.policy.get_values(next_obs);
 
-        let future_q_value: f32 = (self.value_function)(next_q_values, next_action);
+        let future_q_value: f32 = (self.value_function)(&next_q_values, next_action);
 
-        let curr_q_values = self.policy.get(curr_obs).unwrap_or(&Self::DEFAULT_VALUES);
-        let temporal_difference: f32 = reward
-            + if terminated {
-                0.0
-            } else {
-                self.discount_factor * future_q_value
-            }
-            - curr_q_values[curr_action];
+        let curr_q_values = self.policy.get_values(curr_obs);
 
-        let value = self.policy.get(curr_obs).unwrap_or(&Self::DEFAULT_VALUES)[curr_action];
-        self.policy.get_mut(curr_obs).unwrap()[curr_action] =
-            value + self.learning_rate * temporal_difference;
+        let temporal_difference: f32 =
+            reward + self.discount_factor * future_q_value - curr_q_values[curr_action];
+
+        self.policy
+            .update(curr_obs, curr_action, temporal_difference);
 
         if terminated {
             self.epsilon *= 0.9;
@@ -94,11 +89,10 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
     }
 
     pub fn get_action(&mut self, obs: usize) -> usize {
+        let values = self.policy.get_values(obs);
         if self.should_explore() {
-            let values = self.policy.get(obs).unwrap_or(&Self::DEFAULT_VALUES);
             self.rng.gen_range(0..values.len())
         } else {
-            let values = self.policy.get(obs).unwrap_or(&Self::DEFAULT_VALUES);
             argmax(values.iter())
         }
     }
@@ -106,43 +100,44 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
     pub fn learn(
         &mut self,
         env: &mut dyn Env,
-        steps: usize,
+        n_episodes: usize,
         eval_at: usize,
         eval_for: usize,
     ) -> TrainResults {
         let mut results = TrainResults::default();
-        let mut curr_obs = env.reset();
-        let mut curr_action = self.get_action(curr_obs);
-        let mut epi_reward: f32 = 0.0;
-        let mut episode = 0;
-        for step in 1..=steps {
-            let r = env.step(curr_action);
+        for episode in 0..n_episodes {
+            let mut action_counter: usize = 0;
+            let mut epi_reward: f32 = 0.0;
+            let mut curr_obs = env.reset();
+            let mut curr_action = self.get_action(curr_obs);
+            loop {
+                action_counter += 1;
 
-            let (next_obs, reward, done) = match r {
-                Ok(d) => d,
-                Err(e) => panic!("{e:?}"),
-            };
-            let next_action = self.get_action(next_obs);
-            let td = self.update(curr_obs, curr_action, reward, done, next_obs, next_action);
-            results.training_error.push(td);
-            curr_obs = next_obs;
-            curr_action = next_action;
-            epi_reward += reward;
-            if done {
-                if episode % eval_at == 0 {
-                    let (r, l) = self.evaluate(env, eval_for);
-                    let mr: f32 = r.iter().sum::<f32>() / r.len() as f32;
-                    let ml: f32 = l.iter().sum::<usize>() as f32 / l.len() as f32;
-                    results.mean_evaluation_reward.push(mr);
-                    results.mean_evaluation_length.push(ml);
+                let (next_obs, reward, done) = match env.step(curr_action) {
+                    Ok(d) => d,
+                    Err(e) => panic!("{e:?}"),
+                };
+                let next_action: usize = self.get_action(next_obs);
+                let td = self.update(curr_obs, curr_action, reward, done, next_obs, next_action);
+                results.training_error.push(td);
+                curr_obs = next_obs;
+                curr_action = next_action;
+                epi_reward += reward;
+                if done {
+                    results.training_reward.push(epi_reward);
+                    results.training_length.push(action_counter);
+                    break;
                 }
-                results.training_reward.push(epi_reward);
-                curr_obs = env.reset();
-                curr_action = self.get_action(curr_obs);
-                results.training_length.push(step);
-                episode += 1;
+            }
+            if episode % eval_at == 0 {
+                let (r, l) = self.evaluate(env, eval_for);
+                let mr: f32 = r.iter().sum::<f32>() / r.len() as f32;
+                let ml: f32 = l.iter().sum::<usize>() as f32 / l.len() as f32;
+                results.mean_evaluation_reward.push(mr);
+                results.mean_evaluation_length.push(ml);
             }
         }
+
         results
     }
 
@@ -172,7 +167,7 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
     }
 
     pub fn reset(&mut self) {
-        self.policy = [[0.0; A]; S];
+        self.policy.reset();
         self.epsilon = 1.0;
     }
 }
