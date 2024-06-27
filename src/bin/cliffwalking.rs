@@ -1,10 +1,9 @@
 use clap::Parser;
 
 use qlearning::args::Args;
-use qlearning::qlearning::QLearning;
 use qlearning::env::clifwalking::CliffWalkingEnv;
 use qlearning::env::show;
-
+use qlearning::qlearning::QLearning;
 
 fn main() {
     let args = Args::parse();
@@ -27,9 +26,7 @@ fn main() {
         results.0.iter().sum::<f32>() / eval_for as f32
     );
 
-    if show_behavior{
+    if show_behavior {
         show(&mut env, agent);
     }
-
 }
-

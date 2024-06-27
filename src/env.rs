@@ -15,10 +15,7 @@ pub trait Env {
     fn render(&self) -> String;
 }
 
-pub fn show<const T: usize, const A: usize>(
-    env: &mut dyn Env,
-    mut agent: QLearning<T, A>,
-) {
+pub fn show<const T: usize, const A: usize>(env: &mut dyn Env, mut agent: QLearning<T, A>) {
     let mut done = false;
     while !done {
         let mut obs = env.reset();

@@ -1,9 +1,8 @@
 use clap::Parser;
 use qlearning::args::Args;
-use qlearning::qlearning::QLearning;
 use qlearning::env::blackjack::BlackJackEnv;
 use qlearning::env::{show, Env};
-
+use qlearning::qlearning::QLearning;
 
 fn main() {
     let args = Args::parse();
@@ -14,10 +13,10 @@ fn main() {
     let eval_at = args.eval_at;
     let eval_for = args.eval_for;
     let show_behavior = args.print;
-    
+
     let mut env = BlackJackEnv::new(seed);
     let mut agent: QLearning<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
-        QLearning::new( lr, gamma, seed);
+        QLearning::new(lr, gamma, seed);
     let _ = agent.learn(&mut env, episodes, eval_at, eval_for);
 
     let mut wins: u32 = 0;
@@ -48,8 +47,8 @@ fn main() {
         losses as f64 / LOOP_LEN as f64,
         draws as f64 / LOOP_LEN as f64
     );
-    
-    if show_behavior{
+
+    if show_behavior {
         show(&mut env, agent);
     }
 }

@@ -1,4 +1,3 @@
-
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
 use crate::{env::Env, policy::Policy};
@@ -31,11 +30,7 @@ pub struct QLearning<const S: usize, const A: usize> {
 }
 
 impl<const S: usize, const A: usize> QLearning<S, A> {
-    pub fn new(
-        learning_rate: f32,
-        discount_factor: f32,
-        seed: u64,
-    ) -> Self {
+    pub fn new(learning_rate: f32, discount_factor: f32, seed: u64) -> Self {
         Self {
             epsilon: 1.0,
             rng: SmallRng::seed_from_u64(seed),
@@ -49,25 +44,14 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
         curr_obs: usize,
         curr_action: usize,
         reward: f32,
-        terminated: bool,
         next_obs: usize,
     ) -> f32 {
         let next_q_values = self.policy.get_values(next_obs);
-
         let future_q_value: f32 = next_q_values.iter().fold(f32::NAN, |acc, x| acc.max(*x));
-
         let curr_q_values = self.policy.get_values(curr_obs);
-
-        let temporal_difference: f32 =
-            reward + self.discount_factor * future_q_value - curr_q_values[curr_action];
-
-        self.policy
-            .update(curr_obs, curr_action, temporal_difference);
-
-        if terminated {
-            self.epsilon *= 0.9;
-        }
-        temporal_difference
+        let td: f32 = reward + self.discount_factor * future_q_value - curr_q_values[curr_action];
+        self.policy.update(curr_obs, curr_action, td);
+        td
     }
 
     fn should_explore(&mut self) -> bool {
@@ -83,6 +67,10 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
         }
     }
 
+    fn decay_epsilon(&mut self, decay: f32) {
+        self.epsilon *= decay;
+    }
+
     pub fn learn(
         &mut self,
         env: &mut dyn Env,
@@ -95,26 +83,23 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
             let mut action_counter: usize = 0;
             let mut epi_reward: f32 = 0.0;
             let mut curr_obs = env.reset();
-            let mut curr_action = self.get_action(curr_obs);
-            loop {
+            let mut ended = false;
+            while !ended {
                 action_counter += 1;
-
+                let curr_action: usize = self.get_action(curr_obs);
                 let (next_obs, reward, done) = match env.step(curr_action) {
                     Ok(d) => d,
                     Err(e) => panic!("{e:?}"),
                 };
-                let next_action: usize = self.get_action(next_obs);
-                let td = self.update(curr_obs, curr_action, reward, done, next_obs);
+                let td = self.update(curr_obs, curr_action, reward, next_obs);
                 results.training_error.push(td);
                 curr_obs = next_obs;
-                curr_action = next_action;
                 epi_reward += reward;
-                if done {
-                    results.training_reward.push(epi_reward);
-                    results.training_length.push(action_counter);
-                    break;
-                }
+                ended = done;
             }
+            results.training_reward.push(epi_reward);
+            results.training_length.push(action_counter);
+            self.decay_epsilon(0.9);
             if episode % eval_at == 0 {
                 let (r, l) = self.evaluate(env, eval_for);
                 let mr: f32 = r.iter().sum::<f32>() / r.len() as f32;
