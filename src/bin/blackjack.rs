@@ -17,7 +17,7 @@ fn main() {
     let mut env = BlackJackEnv::new(seed);
     let mut agent: QLearning<{ BlackJackEnv::N_STATES }, { BlackJackEnv::N_ACTIONS }> =
         QLearning::new(lr, gamma, seed);
-    let _ = agent.learn(&mut env, episodes, eval_at, eval_for);
+    let _train_results = agent.learn(&mut env, episodes, eval_at, eval_for);
 
     let mut wins: u32 = 0;
     let mut losses: u32 = 0;

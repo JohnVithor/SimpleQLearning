@@ -18,7 +18,7 @@ fn main() {
     let mut env = CliffWalkingEnv::new(100);
     let mut agent: QLearning<{ CliffWalkingEnv::N_STATES }, { CliffWalkingEnv::N_ACTIONS }> =
         QLearning::new(lr, gamma, seed);
-    let _results = agent.learn(&mut env, episodes, eval_at, eval_for);
+    let _train_results = agent.learn(&mut env, episodes, eval_at, eval_for);
     // println!("sarsa {:?}", results.mean_evaluation_reward);
     let results = agent.evaluate(&mut env, eval_for);
     println!(
