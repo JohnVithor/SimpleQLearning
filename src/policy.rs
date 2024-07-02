@@ -12,10 +12,6 @@ impl<const S: usize, const A: usize> Policy<S, A> {
         }
     }
 
-    pub fn predict(&mut self, obs: usize) -> [f32; A] {
-        self.policy[obs]
-    }
-
     pub fn get_values(&mut self, obs: usize) -> [f32; A] {
         self.policy[obs]
     }
