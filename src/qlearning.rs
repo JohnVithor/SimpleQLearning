@@ -4,15 +4,6 @@ use crate::{env::Env, policy::Policy};
 
 pub type ValueFunction<const A: usize> = fn(&[f32; A], usize) -> f32;
 
-#[inline(always)]
-pub fn argmax<T: PartialOrd>(values: impl Iterator<Item = T>) -> usize {
-    values
-        .enumerate()
-        .reduce(|a, b| if a.1 >= b.1 { a } else { b })
-        .unwrap()
-        .0
-}
-
 #[derive(Debug, Default)]
 pub struct TrainResults {
     training_reward: Vec<f32>,
@@ -48,10 +39,8 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
     ) -> f32 {
         let next_q_values = self.policy.get_values(next_obs);
         let future_q_value: f32 = next_q_values.iter().fold(f32::NAN, |acc, x| acc.max(*x));
-        let curr_q_values = self.policy.get_values(curr_obs);
-        let td: f32 = reward + self.discount_factor * future_q_value - curr_q_values[curr_action];
-        self.policy.update(curr_obs, curr_action, td);
-        td
+        let td_target: f32 = reward + self.discount_factor * future_q_value;
+        self.policy.update(curr_obs, curr_action, td_target)
     }
 
     fn should_explore(&mut self) -> bool {
@@ -63,7 +52,12 @@ impl<const S: usize, const A: usize> QLearning<S, A> {
         if self.should_explore() {
             self.rng.gen_range(0..values.len())
         } else {
-            argmax(values.iter())
+            values
+                .into_iter()
+                .enumerate()
+                .reduce(|a, b| if a.1 >= b.1 { a } else { b })
+                .unwrap()
+                .0
         }
     }
 
